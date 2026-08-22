@@ -1,0 +1,30 @@
+# Copyright Gint Atkinson, gint.atkinson@gmail.com
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.pytest_cache/
+scratch/
+
+# Credentials & local env configuration
+.env
+.env.local
+.env.*
+config.json
+
+# Build & temporary artifacts
+dist/
+build/
+.venv/
+venv/
+.tmp-pipeline-install
+
+# Pipeline infrastructure
+!/rules/
+!/rules/**
+!/schema/
+!/schema/**
+!/.agents/
+!/.agents/**
+!/scripts/
+!/scripts/**
