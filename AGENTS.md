@@ -1,9 +1,19 @@
 # Project-Scoped Rules
 
 ## Repository Role & Scope Classification
-- **Repository Classification:** `PIPELINE_PROFILE_TEMPLATE` (Upstream Platform Profile Template for VHDL Hardware)
+- **Repository Classification:** `PIPELINE_DISTRIBUTION_TEMPLATE` (Upstream Domain Template for UAS Infrastructure Safety)
 - **Sentinel Indicator:** The presence of `.pipeline/upstream/` denotes that this repository is the **Pipeline Distribution Template**, NOT a downstream customer application workspace.
 - **Customer Data Boundary:** Customer-specific application code, private flight logs, mission parameters, and proprietary artifacts belong in the customer's downstream repository (installed via `install_pipeline.sh`), and must NOT be committed to this template repository.
+
+## Pure Schema-Driven Compiler Invariant (Zero Hardcoded Domain Concepts)
+- **Abstract MBSE Compiler Declaration**: The DEAP pipeline is an abstract Model-Based Systems Engineering (MBSE) compiler and verification framework, NOT a domain-specific modeler.
+- **Strict Prohibition of Hardcoded Domain Concepts**: Agents are strictly forbidden from inventing, proposing, or hardcoding domain-specific concepts (e.g., aviation flight controllers, automotive sensors, medical models) into pipeline logic, templates, or execution plans.
+- **Deterministic Schema-Derived Specifications**: All specification generation (Epics, Features, User Stories, Use Cases, Safety Invariants) and downstream engineering artifacts derive exclusively and deterministically from AST nodes present in user-provided schemas in `schema/`.
+
+## Upstream Distribution Template Clean Landing Zone Invariant
+- **Clean Landing Zone Mandate**: In upstream distribution template repositories (`DEAP-*`), the directories `schema/`, `docs/epics/`, `docs/features/`, `docs/user-stories/`, and `docs/use-cases/` must remain clean landing zones with ONLY `.gitkeep` files.
+- **Strict Prohibition of Concrete Specifications**: Committing concrete downstream project specifications, models, or code to upstream distribution templates is strictly forbidden.
+- **Downstream Workspace Boundary**: Concrete project schemas and specifications reside exclusively in downstream application workspaces installed via `scripts/install_pipeline.sh`.
 
 ## Mandatory Hidden Folder Direct-Path Read (CRITICAL FIRST STEP)
 - **Mandatory Hidden Folder Direct-Path Read (CRITICAL FIRST STEP)**: You are strictly forbidden from assuming files or directories inside the `.pipeline/` folder (such as `.pipeline/constitution.md` or `.pipeline/profiles/`) do not exist based on glob or search tool results. Because glob and ripgrep index queries skip hidden folders, you MUST verify their presence by directly executing a path read via `view_file` or a folder check via `list_dir`. This MUST be your very first action upon starting a session before declaring state or starting tasks.
@@ -51,7 +61,7 @@ You MUST execute the Subagent Dispatch Loop for these tasks:
    - **Role**: Set a descriptive role (e.g., `Codebase Researcher`, `Feature Spec Writer`, `Micro-Task Implementer`).
    - **Curated Prompt**: Construct a clean, isolated task description. Do not copy the entire conversation history, transcript, or session log. Pass only the task itself, the relevant file contents, schema fragment, spec guidelines, templates, conventions, and reference standards.
    - **Mandatory Single-Item Micro-Task Scope**: Every subagent dispatch prompt MUST target at most 1 specification item (max 1 Epic, 1 Feature, 1 User Story, or 1 Use Case). Assigning multiple specification items to a single subagent dispatch is strictly forbidden.
-   - **Mandatory Skill-Reading Instruction**: When launching a subagent, the coordinator's prompt MUST explicitly instruct the subagent to execute `view_file` on the active `SKILL.md` file by explicit path (e.g. `skills/feature-driven-implementation/SKILL.md`) as its very first step before executing any file edits or commands, and to strictly follow its formatting templates and instruction guidelines. Prompts launching audit subagents MUST explicitly mandate filing defects via `gh issue create`. Summarized or truncated prompt payloads are strictly forbidden.
+   - **Mandatory Skill-Reading Instruction**: When launching a subagent, the coordinator's prompt MUST explicitly instruct the subagent to execute `view_file` on the active `SKILL.md` file by explicit path (e.g. `skills/feature-driven-implementation/SKILL.md`) as its very first step before executing any file edits or commands, and to strictly follow its formatting templates and instruction guidelines.
    - **Enforce Evolved 3-Layer Definition of Done**: Logical UI (LUI) and Aerospace Real-Time Control is platform-independent and supports canonical display/control patterns. The full 3-layer semantic chain — (1) Domain State & Signal Model (e.g. UA Parameter Buffer / Discrete Input Event / Data Model), (2) Logic & Safety State Management (e.g. CDS Widget Definition / Safety Statechart / ViewModel), and (3) Display & Actuator Interface Binding (e.g. Display Kernel Render / Symbology Graphic / GUI Widget Binding + BDD User Story Widget test) — is mandatory **per specification item**, not per subagent dispatch. The 3 canonical LUI patterns are:
      - **Pattern A (ARINC 661 Cockpit Display Systems)**: UA Parameter Buffer -> CDS Widget Definition -> Display Kernel Render
      - **Pattern B (Real-Time Safety Statecharts & Symbology)**: Discrete Event -> Safety Statechart/FSM State -> Symbology/Alarm Render
@@ -79,7 +89,8 @@ If the active runtime's tool list is consulted and no context-isolated dispatch 
 is found, HALT and escalate as a blocker. Do not substitute direct coordinator writes.
 
 ## Mandatory Application Compilation Build for Verification
-- During Step 4 verification and testing, the agent MUST run a full compilation build of the entire application to ensure it compiles without errors and is completely ready to run. Assertions of completion without verified compile output are strictly forbidden.
+- During Step 4 verification and testing, the agent MUST run a full compilation build of the entire application (e.g. `flutter build` or `npm run build` as specified by the platform profile) to ensure it compiles without errors and is completely ready to run. Assertions of completion without verified compile output are strictly forbidden.
+
 
 ## Strict Coordinator Tool Locking & 4-Point Compliance Check
 - Every agent thought block MUST begin with the 4-point Karpathy and Pipeline Compliance Check:
@@ -109,8 +120,13 @@ is found, HALT and escalate as a blocker. Do not substitute direct coordinator w
 - The coordinator MUST ensure every spawned subagent is terminated or reclaimed immediately once its task has been completed and the work is integrated. Where the runtime exposes an explicit termination capability, the coordinator MUST invoke it (individually or for all outstanding subagents). Where the runtime reclaims a subagent automatically on completion — as recorded in the per-runtime table in § *Mandatory Subagent Dispatch for Research, Specification & Implementation Loops* — that automatic reclamation satisfies this obligation, and the coordinator MUST confirm the subagent has actually completed rather than assume it.
 - Subagents are strictly forbidden from being left in an idle or dormant state upon completion of their atomic work package to prevent resource consumption and potential conflicts.
 
+## Mandatory Directory Constraints (No Root Writes)
+- Agents are strictly forbidden from writing, modifying, or executing commands that create source code or project configuration files at the root level of this repository (except for `implementation_plan.md`, `.gitignore`, or custom configurations when explicitly approved).
+- All source code, assets, configurations, and tests for the Flutter application MUST reside exclusively under `app_flutter/`.
+- All source code, assets, configurations, and tests for the React application MUST reside exclusively under `web_react/`.
+
 ## Strict Context Isolation & Skill Fidelity (No Cross-Talk)
-- **No Cross-Talk / Memory Leakage**: You are strictly forbidden from reading, scanning, or referencing logs, transcripts, artifacts, or files belonging to other projects, folders, or conversation IDs stored under the App Data Directory (`~/.gemini/antigravity/brain/`). You must execute tasks strictly based on the inputs and schema files present in the *active* workspace.
+- **No Cross-Talk / Memory Leakage**: You are strictly forbidden from reading, scanning, or referencing logs, transcripts, artifacts, or files belonging to other projects, folders, or conversation IDs (such as `3dgs-ion`, `3dgs-phoenix`, or other network models) stored under the App Data Directory (`~/.gemini/antigravity/brain/`). You must execute tasks strictly based on the inputs and schema files present in the *active* workspace.
 - **Literal Skill Execution (No Summarization)**: When adopting a skill, you must read the skill's instructions in full and adhere to them literally. You are strictly forbidden from summarizing, truncating, or using abbreviated interpretations of instructions.
 
 ## Role Boundary Lock (Specification & Implementation)
@@ -119,7 +135,7 @@ is found, HALT and escalate as a blocker. Do not substitute direct coordinator w
 - **Specification Phase Boundary**: Spec workers and specification subagents are strictly forbidden from reading, writing, or referencing implementation profiles, implementation plans, or target source code files. They must operate strictly within logical, functional, and platform-independent boundaries.
 - **Implementation Phase Boundary**: Implementation subagents and micro-task implementers are strictly forbidden from generating or directly modifying upstream specification files (Epics, Features, User Stories, Use Cases) unless explicitly authorized via a synchronized backlog reconciliation task.
 - **Strict Subagent Tool Locking**: Spawned subagents must only execute tools that fall within their explicit domain (e.g., spec subagents do not run build/test commands or modify code, and implementation subagents do not edit high-level specifications).
-- **Subagent Cleanup**: The coordinator MUST immediately terminate or reclaim any spawned subagents once the subagent's task is completed and the work is integrated.
+- **Subagent Cleanup**: The coordinator MUST immediately terminate or reclaim any spawned subagents once the subagent's task is completed and the work is integrated, using whichever capability the active runtime provides per the per-runtime table in § *Mandatory Subagent Dispatch for Research, Specification & Implementation Loops*. Subagents must never be left in an idle or dormant state.
 
 ## Mermaid Block Closing & Code Fence Integrity
 - Every Mermaid diagram or code block MUST be strictly and explicitly closed with matching closing fences (e.g. ```` ``` ```` on a new line). Leaking Mermaid blocks or stray/unclosed code fences are strictly forbidden as they cause parser failures in downstream validation tools.
@@ -153,6 +169,9 @@ is found, HALT and escalate as a blocker. Do not substitute direct coordinator w
 - **Exit code 0 is NEVER sufficient proof of success.**
 - After modifying or publishing any GitHub issue or document, the agent MUST run `gh issue view <ID>` or `gh api` to fetch the live published payload and inspect links, Mermaid headers, and syntax.
 - **Optimism bias is prohibited**: agents must cite empirical output of live payload inspection before declaring completion.
+
+## Anti-Negligence & Mandatory Payload Inspection Gate
+- **Anti-Negligence & Mandatory Payload Inspection Gate**: Agents are strictly forbidden from declaring completion or readiness for testing without citing live empirical inspection of target artifacts (including `README.md` commands).
 
 ## Downstream Single Source of Truth (SSOT) & Clean Baseline Mandate
 - **No Master Blueprint Duplication**: Downstream projects MUST NOT duplicate or copy master core blueprint files (`DEAP_MASTER_ARCHITECTURE.md`, `THREE_TIER_GOVERNANCE_BLUEPRINT.md`, `DEAP_SYSML_V2_SAFETY_MODEL_SPECIFICATION.sysml`). Central specification blueprints belong exclusively in the upstream specification repository (`gintatkinson/DEAP-spec-core`).
