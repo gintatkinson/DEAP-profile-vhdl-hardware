@@ -34,7 +34,14 @@ def _terminate_process_group(proc):
             pass
 
 def _run_bounded(cmd, cwd, timeout, label):
-    """Run cmd with a timeout that binds the whole process tree."""
+    """Run cmd with a timeout that binds the whole process tree.
+
+    subprocess.run's timeout kills only the direct child. flutter and npm are
+    launchers whose real work happens in grandchildren (analysis server, dart
+    test host, xcodebuild), which survive that kill, keep the build directory
+    open, and then race the cleanup_workspace rmtree. start_new_session puts the
+    tree in its own process group so a single killpg reaches all of it.
+    """
     proc = subprocess.Popen(cmd, cwd=cwd, start_new_session=True)
     try:
         rc = proc.wait(timeout=timeout)
@@ -117,6 +124,7 @@ def cleanup_workspace(destination):
                         os.remove(sidecar_path)
                     except Exception:
                         pass
+
 
 # Mandated domain classes/interfaces to check in types.ts or types.dart
 MANDATED_CLASSES = []
@@ -205,6 +213,17 @@ def main():
         is_flutter = os.path.exists(os.path.join(dest, "pubspec.yaml"))
         is_react = os.path.exists(os.path.join(dest, "package.json"))
 
+        # An explicit --no-domain on the command line is the operator's decision and is
+        # never overridden. The config-file setting is a stored default, so it IS
+        # overridden once a domain directory exists on disk -- that is what stops a
+        # stale config silently disabling verification on a project that has since
+        # implemented its domain.
+        #
+        # Both were overridden until this was fixed, which made --no-domain inert: the
+        # shipped app_flutter and web_react templates both contain a domain directory,
+        # so the flag cancelled itself on every fresh install and the documented
+        # "verify the workspace structure prior to implementing the domain model" path
+        # ran a full `flutter build macos --release` instead.
         no_domain_for_target = args.no_domain
         if not args.no_domain and (
             check_no_domain_config(repo_root) or check_no_domain_config(dest)
@@ -406,10 +425,10 @@ def check_latex_katex_syntax(repo_root):
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
         sys.exit(1)
-    print("Success: Check 13 verified (KaTeX / LaTeX mathematical syntax valid across all markdown files).")
+    print("Success: Check 13 verified (KaTeX / LaTeX mathematical syntax valid across all markdown files, including rules/sysml-ssot-completeness.md).")
 
 def check_downstream_instructions_exist(repo_root):
-    """Check 14: Verify presence of README.md and agent instruction entrypoints (AGENTS.md, CLAUDE.md, or .agents/AGENTS.md)."""
+    """Check 14: Verify presence of README.md, agent instruction entrypoints (AGENTS.md, CLAUDE.md, or .agents/AGENTS.md), and rules/sysml-ssot-completeness.md."""
     readme_path = os.path.join(repo_root, "README.md")
     if not os.path.isfile(readme_path):
         print(f"ERROR: Check 14 failed: README.md missing in repository root '{repo_root}'.", file=sys.stderr)
@@ -428,7 +447,15 @@ def check_downstream_instructions_exist(repo_root):
         print(f"ERROR: Check 14 failed: No non-empty agent instruction entrypoint found in '{repo_root}' (expected AGENTS.md, CLAUDE.md, or .agents/AGENTS.md).", file=sys.stderr)
         sys.exit(1)
 
-    print("Success: Check 14 verified (README.md and agent instruction entrypoints exist).")
+    sysml_rule_path = os.path.join(repo_root, "rules", "sysml-ssot-completeness.md")
+    if not os.path.isfile(sysml_rule_path):
+        print(f"ERROR: Check 14 failed: rules/sysml-ssot-completeness.md missing in repository root '{repo_root}'.", file=sys.stderr)
+        sys.exit(1)
+    if os.path.getsize(sysml_rule_path) == 0:
+        print(f"ERROR: Check 14 failed: rules/sysml-ssot-completeness.md is empty in repository root '{repo_root}'.", file=sys.stderr)
+        sys.exit(1)
+
+    print("Success: Check 14 verified (README.md, agent instruction entrypoints, and rules/sysml-ssot-completeness.md exist).")
 
 def check_reconcile_backlog_tooling_exists(repo_root):
     """Check 15: Verify scripts/reconcile_backlog.py exists, is non-empty, and is executable."""
@@ -455,6 +482,7 @@ def _run_verification(args, dest, repo_root, is_flutter, is_react):
 
     if is_flutter:
         print(f"Verifying conformance for platform 'flutter' at '{dest}'...")
+        # 1. Assert baseline files exist
         baseline_files = [
             "pubspec.yaml",
             "analysis_options.yaml",
@@ -480,15 +508,18 @@ def _run_verification(args, dest, repo_root, is_flutter, is_react):
 
         print("Success: All Flutter baseline files exist.")
 
+        # 2. Validate type compatibility
         if args.no_domain:
             print("Skipping domain type compatibility validation (--no-domain specified).")
         else:
             _validate_domain_types(dest, repo_root, "dart", os.path.join("lib", "domain"))
 
+        # 3. Run build/test commands
         if args.no_domain:
             print("Skipping build and test suite execution (--no-domain specified, domain implementation pending).")
         else:
             try:
+                # Resolve and copy assets directory from template
                 upstream_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 src_assets = os.path.join(upstream_repo_root, "app_flutter", "assets")
                 dest_assets = os.path.join(dest, "assets")
@@ -520,7 +551,12 @@ def _run_verification(args, dest, repo_root, is_flutter, is_react):
                 _run_bounded(["flutter", "build", "macos", "--release"], cwd=dest, timeout=TIMEOUT_SECONDS * 3, label="flutter build macos --release")
                 
                 print("Zipping the macOS application bundle...")
+                # The build output is typically at app_flutter/build/macos/Build/Products/Release/Platform Console.app
+                # We need to package it into the repository root as app_flutter_release.zip
                 zip_path = os.path.join(upstream_repo_root, "app_flutter_release.zip")
+                
+                # We expect the app bundle to be named 'Platform Console.app'. 
+                # Let's find it in the release directory.
                 release_dir = os.path.join(dest, "build", "macos", "Build", "Products", "Release")
                 app_bundle = "Platform Console.app"
                 
@@ -544,6 +580,7 @@ def _run_verification(args, dest, repo_root, is_flutter, is_react):
 
     if is_react:
         print(f"Verifying conformance for platform 'react' at '{dest}'...")
+        # 1. Assert baseline files exist
         has_tsconfig = os.path.exists(os.path.join(dest, "tsconfig.json"))
         has_jsconfig = os.path.exists(os.path.join(dest, "jsconfig.json"))
         if not has_tsconfig and not has_jsconfig:
@@ -573,11 +610,13 @@ def _run_verification(args, dest, repo_root, is_flutter, is_react):
 
         print("Success: All React baseline files exist.")
 
+        # 2. Validate type compatibility
         if args.no_domain:
             print("Skipping domain type compatibility validation (--no-domain specified).")
         else:
             _validate_domain_types(dest, repo_root, "ts", os.path.join("src", "domain"))
 
+        # 3. Run build/test commands
         if args.no_domain:
             print("Skipping build execution (--no-domain specified, domain implementation pending).")
         else:
@@ -596,3 +635,4 @@ def _run_verification(args, dest, repo_root, is_flutter, is_react):
 
 if __name__ == "__main__":
     main()
+
