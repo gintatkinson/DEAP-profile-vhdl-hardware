@@ -1,1 +1,0 @@
-# VHDL Hardware Rules
