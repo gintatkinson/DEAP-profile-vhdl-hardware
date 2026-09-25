@@ -1,12 +1,16 @@
 
 !/.agents/
 !/.agents/**
+!/.pipeline/
+!/.pipeline/**
 !/rules/
 !/rules/**
 !/schema/
 !/schema/**
 !/scripts/
 !/scripts/**
+!/skills/
+!/skills/**
 # 1453 tracked files pinned to Python 3.9.6 and to /Applications/Xcode.app paths,
 # Build & temporary artifacts
 # Copyright Gint Atkinson, gint.atkinson@gmail.com
@@ -14,6 +18,7 @@
 # Diagnostics and reproduction payloads
 # Node dependencies & build artifacts
 # Pipeline infrastructure
+# Pipeline infrastructure (whitelisted by setup_git_hooks.py)
 # Virtualenvs are per-machine and must never be committed. The previous one was
 # so it was broken on every machine but one and shipped an EOL runtime (#294).
 *.egg-info/
@@ -42,9 +47,3 @@ node_modules/
 package-lock.json
 scratch/
 venv/
-
-# Pipeline infrastructure (whitelisted by setup_git_hooks.py)
-!/skills/
-!/skills/**
-!/.pipeline/
-!/.pipeline/**
