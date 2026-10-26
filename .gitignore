@@ -5,19 +5,15 @@
 !/.pipeline/**
 !/rules/
 !/rules/**
-!/schema/
-!/schema/**
 !/scripts/
 !/scripts/**
 !/skills/
 !/skills/**
 # 1453 tracked files pinned to Python 3.9.6 and to /Applications/Xcode.app paths,
-# Build & temporary artifacts
 # Copyright Gint Atkinson, gint.atkinson@gmail.com
 # Credentials & local env configuration
 # Diagnostics and reproduction payloads
 # Node dependencies & build artifacts
-# Pipeline infrastructure
 # Pipeline infrastructure (whitelisted by setup_git_hooks.py)
 # Virtualenvs are per-machine and must never be committed. The previous one was
 # so it was broken on every machine but one and shipped an EOL runtime (#294).
@@ -26,6 +22,7 @@
 *.pyo
 *define*.json
 .DS_Store
+.agents/teamwork/
 .dart_tool/
 .env
 .env.*
@@ -47,3 +44,24 @@ node_modules/
 package-lock.json
 scratch/
 venv/
+# Ignore intermediate Cargo build directories
+/target/debug
+/target/release/build
+/target/release/deps
+/target/release/.fingerprint
+/target/release/incremental
+/target/*
+/target/release/*
+
+# Whitelist release directory and exact Tier 0 binaries
+!/target/release/
+!/target/release/verify-baseline
+!/target/release/compile-sysml
+!/target/release/ingest-sysml
+!/target/release/assemble-conops
+!/target/release/reconcile-backlog
+
+app_flutter/build/
+app_flutter/.dart_tool/
+app_flutter/macos/Pods/
+app_flutter/macos/Flutter/ephemeral/
